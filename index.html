@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>¿La invito a salir? — Una neurona decide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --tinta:#1C0B3B; --tinta-2:#2A1259;
+  --rosa:#FF5C8A; --mostaza:#FFC94A; --menta:#57E3B4;
+  --cielo:#6BC5FF;
+  --lila:#CFC2EE; --lila-tenue:#8E7DBE; --apagado:#6B5B96;
+  --display:"Fraunces",Georgia,serif;
+  --ui:"Space Grotesk",ui-sans-serif,system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--tinta);color:#F3EEFF;font-family:var(--ui);font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1280px;margin:0 auto;padding:26px 20px 70px}
+
+.top{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between;margin-bottom:20px}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(28px,4.4vw,50px);line-height:1.02;margin:0;letter-spacing:-.015em}
+h1 .q{color:var(--rosa)}
+.sub{color:var(--lila-tenue);margin:6px 0 0;max-width:46ch;font-size:15px}
+
+.pasos{display:flex;gap:5px;flex-wrap:wrap;max-width:620px}
+.paso-btn{font-family:var(--ui);font-size:12.5px;font-weight:500;background:transparent;color:var(--lila-tenue);
+  border:1px solid #43307A;border-radius:999px;padding:6px 12px;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
+.paso-btn:hover{color:#F3EEFF;border-color:var(--lila-tenue)}
+.paso-btn[aria-current="true"]{background:var(--rosa);border-color:var(--rosa);color:#2A0716;font-weight:700}
+.paso-btn:focus-visible{outline:2px solid var(--menta);outline-offset:2px}
+
+.grid{display:grid;grid-template-columns:1.3fr .9fr;gap:20px;margin-top:20px}
+@media (max-width:920px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--tinta-2);border:1px solid #43307A;border-radius:20px;padding:20px}
+.escena{position:relative;min-height:440px;display:flex;flex-direction:column}
+svg{display:block;width:100%;height:auto}
+
+.veredicto{margin-top:auto;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;border-top:1px dashed #4A3585;padding-top:14px}
+.veredicto .etq{color:var(--lila-tenue);font-size:13px}
+.veredicto .val{font-family:var(--display);font-size:clamp(26px,3.6vw,40px);font-weight:700;line-height:1}
+.si{color:var(--menta)} .no{color:var(--apagado)} .ella{color:var(--cielo)}
+.conf{font-size:14px;color:var(--lila-tenue);font-variant-numeric:tabular-nums}
+
+.bloque{margin-bottom:24px}
+.bloque:last-child{margin-bottom:0}
+.bloque h2{font-family:var(--display);font-weight:600;font-size:22px;margin:0 0 4px;letter-spacing:-.01em}
+.bloque p{margin:0 0 13px;color:var(--lila);font-size:15px;max-width:52ch}
+.bloque p.nota{color:var(--lila-tenue);font-size:13.5px}
+
+.entrada{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 12px;border-radius:12px;
+  background:#241049;border:1px solid transparent;margin-bottom:7px}
+.entrada.on{border-color:var(--rosa);background:#33124D}
+.entrada.on.suya{border-color:var(--cielo);background:#122A47}
+.entrada .nom{font-size:15px}
+.entrada .nom small{display:block;color:var(--lila-tenue);font-size:12px;line-height:1.3}
+.entrada .wv{font-size:12.5px;color:var(--mostaza);font-weight:700;font-variant-numeric:tabular-nums;flex:none}
+.sw{position:relative;width:50px;height:28px;border-radius:999px;background:#402C73;border:none;cursor:pointer;flex:none;transition:background .18s}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--lila-tenue);transition:transform .18s,background .18s}
+.sw[aria-pressed="true"]{background:var(--rosa)}
+.sw[aria-pressed="true"]::after{transform:translateX(22px);background:#2A0716}
+.sw.suya[aria-pressed="true"]{background:var(--cielo)}
+.sw.suya[aria-pressed="true"]::after{background:#062033}
+.sw:focus-visible{outline:2px solid var(--menta);outline-offset:2px}
+
+.peso{margin-bottom:12px}
+.peso .fila{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;margin-bottom:2px}
+.peso .num{font-weight:700;color:var(--mostaza);font-variant-numeric:tabular-nums}
+.peso.umbral .num{color:var(--menta)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:2px;background:#402C73;outline:none;margin:6px 0 0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--mostaza);cursor:pointer;border:3px solid var(--tinta-2)}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--mostaza);cursor:pointer;border:3px solid var(--tinta-2)}
+#sl-u::-webkit-slider-thumb{background:var(--menta)}
+#sl-u::-moz-range-thumb{background:var(--menta)}
+input[type=range]:focus-visible{outline:2px solid var(--menta);outline-offset:4px}
+
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px}
+.chip{font-family:var(--ui);font-size:12.5px;background:#241049;color:var(--lila);border:1px solid #43307A;border-radius:999px;padding:6px 12px;cursor:pointer}
+.chip:hover{border-color:var(--mostaza);color:#fff}
+.chip[aria-pressed="true"]{background:var(--mostaza);color:#3A2600;border-color:var(--mostaza);font-weight:700}
+.chip:focus-visible{outline:2px solid var(--menta);outline-offset:2px}
+
+.formula{background:#180934;border:1px solid #43307A;border-radius:14px;padding:14px 16px;font-variant-numeric:tabular-nums;font-size:15px;line-height:2;overflow-x:auto}
+.formula .term{white-space:nowrap}
+.formula .x{color:var(--rosa)} .formula .w{color:var(--mostaza)}
+.formula .z{color:var(--menta);font-weight:700} .formula .off{color:var(--apagado)}
+.formula .big{font-size:19px;font-weight:700}
+.formula hr{border:none;border-top:1px solid #43307A;margin:9px 0}
+
+.dosvias{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.dosvias > div{background:#180934;border:1px solid #43307A;border-radius:12px;padding:12px 13px}
+.dosvias h3{margin:0 0 6px;font-size:12.5px;font-weight:500;color:var(--lila-tenue);font-family:var(--ui)}
+.dosvias code{display:block;font-family:var(--ui);font-size:15px;font-weight:700;color:var(--menta);letter-spacing:-.01em}
+.dosvias small{display:block;margin-top:6px;color:var(--apagado);font-size:12px;line-height:1.4}
+
+.tip{border-left:3px solid var(--mostaza);padding:2px 0 2px 13px;margin-top:14px;color:var(--lila);font-size:14px}
+.tip b{color:var(--mostaza);font-weight:700}
+.tip.fria{border-color:var(--cielo)}
+.tip.fria b{color:var(--cielo)}
+
+.pie{margin-top:24px;color:var(--lila-tenue);font-size:13px;text-align:center}
+kbd{background:#241049;border:1px solid #43307A;border-radius:5px;padding:1px 6px;font-family:var(--ui);font-size:12px;color:var(--lila)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div>
+      <h1>¿La invito a salir<span class="q">?</span></h1>
+      <p class="sub">Una decisión de septiembre, resuelta por neuronas artificiales. Muevan los controles y miren cómo cambia.</p>
+    </div>
+    <nav class="pasos" id="pasos" aria-label="Pasos de la explicación"></nav>
+  </div>
+
+  <div class="grid">
+    <section class="panel escena">
+      <svg id="lienzo" viewBox="0 0 660 400" role="img" aria-label="Diagrama de la neurona"></svg>
+      <div class="veredicto">
+        <span class="etq" id="etq-ver">Salida de la neurona</span>
+        <span class="val" id="veredicto">—</span>
+        <span class="conf" id="detalle"></span>
+      </div>
+    </section>
+    <section class="panel" id="controles"></section>
+  </div>
+
+  <p class="pie">Usen <kbd>←</kbd> y <kbd>→</kbd> para avanzar entre pasos durante la exposición.</p>
+</div>
+
+<script>
+"use strict";
+
+/* ================= ESTADO ================= */
+const ENTRADAS=[
+ {id:"dinero",nom:"Tengo plata este fin",corto:"plata",desc:"al menos para dos boletas y un café",x:1,w:1.5},
+ {id:"clima", nom:"El clima está bueno", corto:"clima",desc:"no está diluviando",x:1,w:0.5},
+ {id:"sitio", nom:"Hay un buen sitio",   corto:"sitio",desc:"un plan que valga la pena proponer",x:1,w:1.0},
+ {id:"carro", nom:"Tengo carro ese día", corto:"carro",desc:"o al menos cómo movernos",x:0,w:0.75}
+];
+let umbral=1.5;                 // θ del perceptrón
+const sesgo=()=>-umbral;        // b = −θ
+let activacion="escalon";
+let paso=0;
+
+const ELLA=[
+ {id:"caes", nom:"Le caes bien",         corto:"le caes bien",  desc:"la señal que más pesa, de lejos", x:1, w:2.0},
+ {id:"libre",nom:"Está libre ese día",   corto:"está libre",    desc:"no tiene parcial el lunes",       x:1, w:1.5},
+ {id:"gusta",nom:"Le gusta el plan",     corto:"le gusta el plan",desc:"tu propuesta le suena",         x:0, w:1.2}
+];
+const UMBRAL_ELLA=2.5;
+
+const PRESETS={
+ romantico:{dinero:0.5,clima:0.5,sitio:1.0,carro:0.25,u:-0.5},
+ precavido:{dinero:1.5,clima:1.0,sitio:1.0,carro:1.5, u:3.5},
+ interesado:{dinero:2.0,clima:0.0,sitio:0.5,carro:0.0,u:1.5}
+};
+
+const FUNCS={
+ escalon:{nom:"Escalón",f:z=>z>=0?1:0,
+  txt:"La original de 1958. Corta seco: 0 o 1, sin matices. Sirve para decidir, pero no dice <em>qué tanto</em>, y su derivada es cero en todas partes, así que no se puede entrenar con descenso del gradiente."},
+ sigmoide:{nom:"Sigmoide",f:z=>1/(1+Math.exp(-z)),
+  txt:"Aplasta cualquier número al rango 0–1, así que la salida se lee como probabilidad: 0.87 es “estoy bastante seguro”. Es suave y derivable, y eso es lo que permite entrenar la red."},
+ relu:{nom:"ReLU",f:z=>Math.max(0,z),
+  txt:"max(0, z). Si el resultado es negativo la neurona se apaga; si es positivo lo deja pasar tal cual. Es la más usada hoy en capas ocultas: baratísima de calcular y no satura."},
+ tanh:{nom:"Tangente hiperbólica",f:z=>Math.tanh(z),
+  txt:"Como la sigmoide pero centrada en cero, de −1 a 1. Permite que una neurona aporte en contra, no solo a favor."}
+};
+
+const PASOS=[
+ {t:"1. Entradas"},{t:"2. Pesos"},{t:"3. Umbral y sesgo"},{t:"4. La suma"},
+ {t:"5. Activación"},{t:"6. Ella responde"},{t:"7. La red completa"}
+];
+
+/* ================= CÁLCULO ================= */
+const suma=()=>ENTRADAS.reduce((s,e)=>s+e.x*e.w,0);
+const z=()=>suma()+sesgo();
+const salida=()=>FUNCS[activacion].f(z());
+const invito=()=>z()>=0?1:0;
+const sumaElla=()=>ELLA.reduce((s,e)=>s+e.x*e.w,0);
+const zElla=()=>sumaElla()-UMBRAL_ELLA;
+const respuesta=()=>invito()===0?null:(zElla()>=0?1:0);
+const fmt=n=>(Math.round(n*100)/100).toFixed(2);
+
+const OCULTA=[
+ {nom:"“Hay plan”",     w:{dinero:0.4,clima:1.2,sitio:2.0,carro:0.2},b:-1.6,wo:1.2},
+ {nom:"“Hay logística”",w:{dinero:0.3,clima:0.9,sitio:0.2,carro:2.0},b:-1.5,wo:0.9},
+ {nom:"“Hay bolsillo”", w:{dinero:2.2,clima:0.0,sitio:0.3,carro:0.1},b:-1.4,wo:1.4}
+];
+const sig=v=>1/(1+Math.exp(-v));
+function red(){
+ const v=ENTRADAS.reduce((o,e)=>(o[e.id]=e.x,o),{});
+ const h=OCULTA.map(n=>sig(Object.keys(n.w).reduce((s,k)=>s+n.w[k]*v[k],0)+n.b));
+ const zo=h.reduce((s,a,i)=>s+a*OCULTA[i].wo,0)-1.4;
+ return {h,zo,a:sig(zo),dec:zo>=0?1:0};
+}
+
+/* ================= SVG ================= */
+const NS="http://www.w3.org/2000/svg";
+const el=(t,a)=>{const n=document.createElementNS(NS,t);for(const k in a)n.setAttribute(k,a[k]);return n};
+function txt(x,y,s,o={}){
+ const t=el("text",{x,y,fill:o.fill||"#CFC2EE","font-size":o.size||13,
+  "font-family":o.fam||'"Space Grotesk",sans-serif',"font-weight":o.peso||400,"text-anchor":o.anchor||"start"});
+ t.textContent=s;return t;
+}
+
+function dibujar(){
+ const s=document.getElementById("lienzo");
+ s.innerHTML="";
+ if(paso===6){s.setAttribute("viewBox","0 0 780 420");dibujarRed(s);return}
+ if(paso===5){s.setAttribute("viewBox","0 0 700 400");dibujarElla(s);return}
+ s.setAttribute("viewBox","0 0 660 400");
+ dibujarNeurona(s);
+}
+
+/* ---- pasos 1 a 5 ---- */
+function dibujarNeurona(s){
+ const zz=z(),a=salida(),enc=zz>=0;
+ const xIn=118,yIn=[70,140,210,280],xN=368,yN=175,xOut=575;
+
+ ENTRADAS.forEach((e,i)=>{
+  const on=e.x===1, gro=paso>=1?Math.max(1,Math.abs(e.w)*3.2):2;
+  s.appendChild(el("path",{d:`M ${xIn+42} ${yIn[i]} C ${xIn+130} ${yIn[i]}, ${xN-130} ${yN}, ${xN-48} ${yN}`,
+   stroke:!on?"#3A2A66":(paso>=1?"#FFC94A":"#FF5C8A"),"stroke-width":gro,fill:"none",opacity:on?.95:.35}));
+  if(paso>=1){
+   const mx=(xIn+xN)/2-6,my=yIn[i]+(yN-yIn[i])*0.42;
+   s.appendChild(el("rect",{x:mx-24,y:my-11,width:48,height:22,rx:7,fill:"#180934",stroke:"#43307A"}));
+   s.appendChild(txt(mx,my+5,fmt(e.w),{anchor:"middle",fill:"#FFC94A",peso:700,size:12.5}));
+  }
+ });
+
+ ENTRADAS.forEach((e,i)=>{
+  const on=e.x===1;
+  s.appendChild(el("circle",{cx:xIn,cy:yIn[i],r:26,fill:on?"#FF5C8A":"#241049",stroke:on?"#FF5C8A":"#43307A","stroke-width":2}));
+  s.appendChild(txt(xIn,yIn[i]+7,String(e.x),{anchor:"middle",peso:700,size:20,fill:on?"#2A0716":"#6B5B96",fam:'"Fraunces",serif'}));
+  s.appendChild(txt(xIn-38,yIn[i]+5,e.corto,{anchor:"end",size:13,fill:on?"#F3EEFF":"#6B5B96"}));
+ });
+
+ if(paso>=2){
+  s.appendChild(el("path",{d:`M ${xN} 336 L ${xN} ${yN+48}`,stroke:"#FFC94A","stroke-width":2,fill:"none","stroke-dasharray":"5 4"}));
+  s.appendChild(el("circle",{cx:xN,cy:351,r:21,fill:"#241049",stroke:"#FFC94A","stroke-width":2}));
+  s.appendChild(txt(xN,356,fmt(sesgo()),{anchor:"middle",fill:"#FFC94A",peso:700,size:12}));
+  s.appendChild(txt(xN+30,349,"sesgo b = −θ",{size:12.5,fill:"#8E7DBE"}));
+  s.appendChild(txt(xN+30,365,"umbral θ = "+fmt(umbral),{size:12.5,fill:"#57E3B4"}));
+ }
+
+ s.appendChild(el("circle",{cx:xN,cy:yN,r:48,fill:"#180934",stroke:enc?"#57E3B4":"#43307A","stroke-width":3}));
+ if(paso===2){
+  s.appendChild(txt(xN,yN-12,"Σwx = "+fmt(suma()),{anchor:"middle",size:13,fill:"#FFC94A",peso:700}));
+  s.appendChild(txt(xN,yN+8,enc?"≥":"<",{anchor:"middle",size:16,fill:"#8E7DBE"}));
+  s.appendChild(txt(xN,yN+28,"θ = "+fmt(umbral),{anchor:"middle",size:13,fill:"#57E3B4",peso:700}));
+ }else if(paso>=3){
+  s.appendChild(txt(xN,yN-4,"z =",{anchor:"middle",size:12,fill:"#8E7DBE"}));
+  s.appendChild(txt(xN,yN+21,fmt(zz),{anchor:"middle",size:23,peso:700,fill:enc?"#57E3B4":"#8E7DBE",fam:'"Fraunces",serif'}));
+ }else{
+  s.appendChild(txt(xN,yN+9,"Σ",{anchor:"middle",size:30,fill:"#CFC2EE",fam:'"Fraunces",serif'}));
+ }
+ s.appendChild(txt(xN,yN-64,paso>=2?"suma ponderada vs. umbral":"la neurona",{anchor:"middle",size:12.5,fill:"#8E7DBE"}));
+
+ if(paso>=4){
+  s.appendChild(el("path",{d:`M ${xN+52} ${yN} L ${xOut-72} ${yN}`,stroke:enc?"#57E3B4":"#3A2A66","stroke-width":3,fill:"none"}));
+  s.appendChild(el("rect",{x:xOut-66,y:yN-40,width:80,height:80,rx:16,fill:"#180934",stroke:enc?"#57E3B4":"#43307A","stroke-width":2}));
+  minigrafo(s,xOut-66,yN-40,80,80,zz,FUNCS[activacion].f);
+  s.appendChild(txt(xOut-26,yN-52,FUNCS[activacion].nom,{anchor:"middle",size:12,fill:"#8E7DBE"}));
+  s.appendChild(txt(xOut-26,yN+62,"salida = "+fmt(a),{anchor:"middle",size:13.5,peso:700,fill:enc?"#57E3B4":"#8E7DBE"}));
+ }else{
+  s.appendChild(el("path",{d:`M ${xN+52} ${yN} L ${xOut-20} ${yN}`,stroke:"#3A2A66","stroke-width":3,fill:"none","stroke-dasharray":"6 6"}));
+  s.appendChild(txt(xOut-8,yN+6,"?",{size:26,fill:"#6B5B96",fam:'"Fraunces",serif'}));
+ }
+}
+
+function minigrafo(s,x,y,w,h,zz,f){
+ const lo=-4,hi=4;let vmin=Infinity,vmax=-Infinity,pts=[];
+ for(let i=0;i<=60;i++){const v=lo+(hi-lo)*i/60,fv=f(v);pts.push([v,fv]);vmin=Math.min(vmin,fv);vmax=Math.max(vmax,fv)}
+ if(vmax-vmin<0.001)vmax=vmin+1;
+ const px=v=>x+6+((v-lo)/(hi-lo))*(w-12), py=v=>y+h-6-((v-vmin)/(vmax-vmin))*(h-12);
+ s.appendChild(el("path",{d:`M ${px(0)} ${y+4} L ${px(0)} ${y+h-4}`,stroke:"#3A2A66","stroke-width":1}));
+ s.appendChild(el("path",{d:pts.map((p,i)=>(i?"L":"M")+px(p[0])+" "+py(p[1])).join(" "),
+  stroke:"#FF5C8A","stroke-width":2.5,fill:"none","stroke-linejoin":"round"}));
+ const zc=Math.max(lo,Math.min(hi,zz));
+ s.appendChild(el("circle",{cx:px(zc),cy:py(f(zc)),r:5,fill:"#57E3B4",stroke:"#180934","stroke-width":2}));
+}
+
+/* ---- paso 6: ella responde ---- */
+function dibujarElla(s){
+ const inv=invito(), r=respuesta(), ze=zElla();
+ const VER=inv?"#57E3B4":"#5A4A8C";
+ const xI=170, yIn=[198,258,318], xN=436, yN=258, xOut=622;
+ const cx=96, cy=96;
+
+ /* ---- tarjeta: resultado de los pasos anteriores ---- */
+ s.appendChild(txt(26,30,"resultado de los pasos 1 a 5",{size:11.5,fill:VER}));
+ s.appendChild(el("rect",{x:24,y:40,width:272,height:114,rx:18,fill:"#180934",
+  stroke:VER,"stroke-width":2,"stroke-dasharray":"8 5",opacity:.95}));
+ if(inv){
+  s.appendChild(el("circle",{cx,cy,r:46,fill:"none",stroke:"#57E3B4","stroke-width":8,opacity:.14}));
+  s.appendChild(el("circle",{cx,cy,r:39,fill:"none",stroke:"#57E3B4","stroke-width":5,opacity:.28}));
+ }
+ s.appendChild(el("circle",{cx,cy,r:31,fill:inv?"#57E3B4":"#241049",stroke:VER,"stroke-width":2.5}));
+ s.appendChild(txt(cx,cy+9,String(inv),{anchor:"middle",peso:700,size:25,fill:inv?"#052D22":"#6B5B96",fam:'"Fraunces",serif'}));
+ s.appendChild(txt(146,84,"TU neurona",{size:14.5,peso:700,fill:"#F3EEFF"}));
+ s.appendChild(txt(146,103,inv?"disparó: la invitaste":"no disparó",{size:12,fill:"#8E7DBE"}));
+ s.appendChild(txt(146,125,"salida = "+inv,{size:15,peso:700,fill:VER}));
+
+ /* ---- el puente: su salida es la entrada de ella ---- */
+ s.appendChild(el("path",{d:"M 298 112 C 348 138, 356 200, 394 230",
+  stroke:VER,"stroke-width":inv?4.5:2,fill:"none","stroke-dasharray":inv?"":"7 6",opacity:inv?1:.45}));
+ s.appendChild(el("polygon",{points:"400,236 384.7,232.4 391.3,222.4",fill:VER,opacity:inv?1:.45}));
+ s.appendChild(txt(682,58,inv?"esta salida se vuelve su entrada":"sin invitación no hay señal",
+  {anchor:"end",size:13,peso:700,fill:VER}));
+ s.appendChild(txt(682,78,"eso es una red: neuronas alimentando neuronas",{anchor:"end",size:11.5,fill:"#8E7DBE"}));
+
+ /* ---- las señales de ella ---- */
+ s.appendChild(txt(32,180,"lo que ella evalúa por su lado",{size:11.5,fill:"#8E7DBE"}));
+ ELLA.forEach((e,i)=>{
+  const on=e.x===1&&inv===1;
+  s.appendChild(el("path",{d:`M ${xI+28} ${yIn[i]} C 250 ${yIn[i]}, 320 ${yN}, ${xN-46} ${yN}`,
+   stroke:on?"#6BC5FF":"#25355C","stroke-width":Math.max(1,e.w*2),fill:"none",opacity:on?.9:.3}));
+  const mx=308,my=yIn[i]+(yN-yIn[i])*0.52;
+  s.appendChild(el("rect",{x:mx-22,y:my-11,width:44,height:22,rx:7,fill:"#180934",stroke:"#43307A"}));
+  s.appendChild(txt(mx,my+5,fmt(e.w),{anchor:"middle",fill:"#6BC5FF",peso:700,size:12}));
+  s.appendChild(el("circle",{cx:xI,cy:yIn[i],r:24,fill:e.x?"#6BC5FF":"#241049",stroke:e.x?"#6BC5FF":"#43307A","stroke-width":2}));
+  s.appendChild(txt(xI,yIn[i]+7,String(e.x),{anchor:"middle",peso:700,size:18,fill:e.x?"#062033":"#6B5B96",fam:'"Fraunces",serif'}));
+  s.appendChild(txt(xI-34,yIn[i]+5,e.corto,{anchor:"end",size:12.5,fill:e.x?"#F3EEFF":"#6B5B96"}));
+ });
+
+ /* ---- la neurona de ella ---- */
+ const act=inv===1;
+ s.appendChild(el("circle",{cx:xN,cy:yN,r:48,fill:"#180934",stroke:act?(r?"#6BC5FF":"#43307A"):"#2A1E4D","stroke-width":3}));
+ if(act){
+  s.appendChild(txt(xN,yN-12,"Σwx = "+fmt(sumaElla()),{anchor:"middle",size:12.5,fill:"#6BC5FF",peso:700}));
+  s.appendChild(txt(xN,yN+7,ze>=0?"≥":"<",{anchor:"middle",size:15,fill:"#8E7DBE"}));
+  s.appendChild(txt(xN,yN+27,"θ = "+fmt(UMBRAL_ELLA),{anchor:"middle",size:12.5,fill:"#57E3B4",peso:700}));
+ }else{
+  s.appendChild(txt(xN,yN+7,"sin señal",{anchor:"middle",size:14,fill:"#4A3A78"}));
+ }
+ s.appendChild(txt(xN,yN-62,"la neurona de ella",{anchor:"middle",size:12.5,fill:"#8E7DBE"}));
+
+ /* ---- activación escalón y respuesta ---- */
+ s.appendChild(el("path",{d:`M ${xN+52} ${yN} L ${xOut-72} ${yN}`,stroke:act?"#6BC5FF":"#2A1E4D","stroke-width":3,fill:"none","stroke-dasharray":act?"":"6 6"}));
+ s.appendChild(el("rect",{x:xOut-66,y:yN-40,width:80,height:80,rx:16,fill:"#180934",stroke:act?"#6BC5FF":"#2A1E4D","stroke-width":2}));
+ minigrafo(s,xOut-66,yN-40,80,80,act?ze:-99,FUNCS.escalon.f);
+ s.appendChild(txt(xOut-26,yN-52,"Escalón",{anchor:"middle",size:12,fill:"#8E7DBE"}));
+ s.appendChild(txt(xOut-26,yN+62,r===null?"—":"respuesta = "+r,{anchor:"middle",size:13.5,peso:700,fill:r?"#6BC5FF":"#8E7DBE"}));
+}
+
+/* ---- paso 7: red completa ---- */
+function dibujarRed(s){
+ const r=red(),inv=r.dec,resp=inv?(zElla()>=0?1:0):null;
+ const xI=52,yI=[44,100,156,212],xH=196,yH=[72,128,184],xD=336,yD=128;
+ const xE=452,yE=[262,318,374],xR=612,yR=232;
+
+ OCULTA.forEach((n,j)=>{
+  ENTRADAS.forEach((e,i)=>{
+   s.appendChild(el("path",{d:`M ${xI+20} ${yI[i]} C 130 ${yI[i]}, 130 ${yH[j]}, ${xH-24} ${yH[j]}`,
+    stroke:e.x?"#FFC94A":"#33235E","stroke-width":Math.max(.8,n.w[e.id]*1.4),fill:"none",opacity:e.x?.75:.3}));
+  });
+  s.appendChild(el("path",{d:`M ${xH+24} ${yH[j]} C 275 ${yH[j]}, 275 ${yD}, ${xD-28} ${yD}`,
+   stroke:"#57E3B4","stroke-width":Math.max(.8,n.wo*1.4),fill:"none",opacity:.25+r.h[j]*.7}));
+ });
+ ENTRADAS.forEach((e,i)=>{
+  s.appendChild(el("circle",{cx:xI,cy:yI[i],r:17,fill:e.x?"#FF5C8A":"#241049",stroke:e.x?"#FF5C8A":"#43307A","stroke-width":2}));
+  s.appendChild(txt(xI,yI[i]+5,String(e.x),{anchor:"middle",peso:700,size:14,fill:e.x?"#2A0716":"#6B5B96"}));
+  s.appendChild(txt(xI+23,yI[i]-20,e.corto,{size:11,fill:e.x?"#CFC2EE":"#6B5B96"}));
+ });
+ OCULTA.forEach((n,j)=>{
+  const a=r.h[j];
+  s.appendChild(el("circle",{cx:xH,cy:yH[j],r:24,fill:"#180934",stroke:"#57E3B4","stroke-width":2,opacity:.35+a*.65}));
+  s.appendChild(el("circle",{cx:xH,cy:yH[j],r:24*Math.max(.12,a),fill:"#57E3B4",opacity:.7}));
+  s.appendChild(txt(xH,yH[j]+40,n.nom,{anchor:"middle",size:10.5,fill:"#CFC2EE"}));
+ });
+ if(inv){
+  s.appendChild(el("circle",{cx:xD,cy:yD,r:44,fill:"none",stroke:"#57E3B4","stroke-width":8,opacity:.13}));
+  s.appendChild(el("circle",{cx:xD,cy:yD,r:37,fill:"none",stroke:"#57E3B4","stroke-width":5,opacity:.26}));
+ }
+ s.appendChild(el("circle",{cx:xD,cy:yD,r:30,fill:inv?"#57E3B4":"#180934",stroke:inv?"#57E3B4":"#43307A","stroke-width":3}));
+ s.appendChild(txt(xD,yD+8,String(inv),{anchor:"middle",size:20,peso:700,fam:'"Fraunces",serif',fill:inv?"#052D22":"#8E7DBE"}));
+ s.appendChild(txt(xD,yD-46,"tu decisión",{anchor:"middle",size:11.5,fill:"#8E7DBE"}));
+
+ // puente hacia ella
+ s.appendChild(el("path",{d:`M ${xD+32} ${yD+16} C 420 ${yD+70}, 480 ${yR-70}, ${xR-34} ${yR-14}`,
+  stroke:inv?"#57E3B4":"#2A1E4D","stroke-width":inv?3:1.5,fill:"none","stroke-dasharray":inv?"":"5 5",opacity:inv?.9:.4}));
+ s.appendChild(txt(455,182,inv?"la invitaste":"nunca la invitaste",{anchor:"middle",size:11,fill:inv?"#57E3B4":"#6B5B96"}));
+
+ ELLA.forEach((e,i)=>{
+  const on=e.x===1&&inv===1;
+  s.appendChild(el("path",{d:`M ${xE+20} ${yE[i]} C 530 ${yE[i]}, 545 ${yR}, ${xR-30} ${yR+10}`,
+   stroke:on?"#6BC5FF":"#25355C","stroke-width":Math.max(.8,e.w*1.5),fill:"none",opacity:on?.85:.3}));
+  s.appendChild(el("circle",{cx:xE,cy:yE[i],r:17,fill:e.x?"#6BC5FF":"#241049",stroke:e.x?"#6BC5FF":"#43307A","stroke-width":2}));
+  s.appendChild(txt(xE,yE[i]+5,String(e.x),{anchor:"middle",peso:700,size:14,fill:e.x?"#062033":"#6B5B96"}));
+  s.appendChild(txt(xE-24,yE[i]+4,e.corto,{anchor:"end",size:11,fill:e.x?"#CFC2EE":"#6B5B96"}));
+ });
+ s.appendChild(txt(xE,yE[0]-32,"lo que ella evalúa",{anchor:"middle",size:11,fill:"#8E7DBE"}));
+
+ s.appendChild(el("circle",{cx:xR,cy:yR,r:34,fill:"#180934",stroke:resp?"#6BC5FF":"#43307A","stroke-width":3}));
+ s.appendChild(txt(xR,yR+9,resp===null?"—":String(resp),{anchor:"middle",size:22,peso:700,fam:'"Fraunces",serif',fill:resp?"#6BC5FF":"#8E7DBE"}));
+ s.appendChild(txt(xR,yR-46,"su respuesta",{anchor:"middle",size:11.5,fill:"#8E7DBE"}));
+
+ s.appendChild(txt(xI,18,"entradas",{anchor:"start",size:11,fill:"#8E7DBE"}));
+ s.appendChild(txt(xH,18,"capa oculta",{anchor:"middle",size:11,fill:"#8E7DBE"}));
+ s.appendChild(txt(xD,18,"salida",{anchor:"middle",size:11,fill:"#8E7DBE"}));
+ s.appendChild(txt(xR,404,"escalón: 1 o 0, sin punto medio",{anchor:"middle",size:11,fill:"#6B5B96"}));
+}
+
+/* ================= VEREDICTO ================= */
+function pintarVeredicto(){
+ const v=document.getElementById("veredicto"),d=document.getElementById("detalle"),e=document.getElementById("etq-ver");
+ if(paso>=5){
+  const inv=paso===6?red().dec:invito(), r=inv?(zElla()>=0?1:0):null;
+  e.textContent="Resultado";
+  if(!inv){v.textContent="Ni la invitaste";v.className="val no";d.textContent="la neurona de ella nunca recibió señal";return}
+  v.textContent=r?"Te dijo que sí":"Te dijo que no";
+  v.className="val "+(r?"ella":"no");
+  d.textContent=`Σwx = ${fmt(sumaElla())} · θ = ${fmt(UMBRAL_ELLA)} · z = ${fmt(zElla())}`;
+  return;
+ }
+ e.textContent="Salida de la neurona";
+ if(paso<2){
+  v.textContent="falta el umbral";v.className="val no";
+  d.textContent=paso===1?`Σwx = ${fmt(suma())}`:"";
+  return;
+ }
+ const si=z()>=0;
+ v.textContent=si?"Sí, invítala":"Hoy no";
+ v.className="val "+(si?"si":"no");
+ if(paso===2) d.textContent=`Σwx = ${fmt(suma())} ${si?"≥":"<"} θ = ${fmt(umbral)}`;
+ else if(paso===3) d.textContent=`z = Σwx + b = ${fmt(suma())} ${sesgo()<0?"−":"+"} ${fmt(Math.abs(sesgo()))} = ${fmt(z())}`;
+ else d.textContent=`z = ${fmt(z())} → ${FUNCS[activacion].nom} → ${fmt(salida())}`;
+}
+
+/* ================= CONTROLES ================= */
+function togglesHTML(lista,clase){
+ return lista.map(e=>`
+  <div class="entrada ${e.x?"on":""} ${clase}" >
+   <span class="nom">${e.nom}<small>${e.desc}</small></span>
+   ${clase==="suya"?`<span class="wv" style="color:#6BC5FF">w ${fmt(e.w)}</span>`:""}
+   <button class="sw ${clase}" data-sw="${e.id}" data-lista="${clase}" aria-pressed="${e.x?"true":"false"}" aria-label="${e.nom}"></button>
+  </div>`).join("");
+}
+
+function pintarControles(){
+ const c=document.getElementById("controles");let h="";
+
+ if(paso===0){
+  h=`<div class="bloque">
+   <h2>Las entradas</h2>
+   <p>Una neurona no sabe nada del mundo. Solo recibe números. Aquí traducimos la situación a cuatro señales, cada una en 0 o 1.</p>
+   ${togglesHTML(ENTRADAS,"tuya")}
+   <div class="tip">En notación formal esto es el vector de entrada <b>x = (x₁, x₂, x₃, x₄)</b>. Una red de visión artificial recibe miles: un píxel cada una.</div>
+  </div>`;
+ }
+
+ if(paso===1){
+  h=`<div class="bloque">
+   <h2>Los pesos</h2>
+   <p>No todo importa igual. El peso <b>w</b> dice cuánto vale cada señal. Muévanlos y miren cómo engordan o adelgazan las conexiones.</p>
+   ${ENTRADAS.map(e=>`
+    <div class="peso">
+     <div class="fila"><span>${e.nom}</span><span class="num" id="n-${e.id}">${fmt(e.w)}</span></div>
+     <input type="range" min="-2" max="2" step="0.05" value="${e.w}" data-w="${e.id}" aria-label="Peso de ${e.nom}">
+    </div>`).join("")}
+   <div class="formula" style="margin-top:16px">
+    <div class="term big"><span class="off">Σwx =</span> <span class="w">${fmt(suma())}</span></div>
+   </div>
+   <p class="nota" style="margin-top:14px">Perfiles de ejemplo:</p>
+   <div class="chips">
+    <button class="chip" data-preset="romantico">El romántico</button>
+    <button class="chip" data-preset="precavido">El precavido</button>
+    <button class="chip" data-preset="interesado">El que solo mira la plata</button>
+   </div>
+   <div class="tip">Un peso <b>negativo</b> es una señal en contra; un peso <b>cero</b> es una señal que la neurona aprendió a ignorar. Entrenar una red es, literalmente, buscar los números de estos deslizadores.</div>
+  </div>`;
+ }
+
+ if(paso===2){
+  const S=suma(),si=S>=umbral;
+  h=`<div class="bloque">
+   <h2>El umbral y el sesgo</h2>
+   <p>Ya tenemos un total: <b>Σwx = ${fmt(S)}</b>. Pero un número suelto no decide nada. Falta contra qué compararlo.</p>
+   <div class="peso umbral">
+    <div class="fila"><span>Umbral θ — qué tan exigente soy</span><span class="num" id="n-u">${fmt(umbral)}</span></div>
+    <input type="range" min="-1" max="4" step="0.05" value="${umbral}" id="sl-u" aria-label="Umbral">
+   </div>
+   <div class="formula">
+    <div class="term"><span class="off">total acumulado</span> &nbsp; <span class="w">${fmt(S)}</span></div>
+    <div class="term"><span class="off">umbral θ</span> &nbsp; <span class="z">${fmt(umbral)}</span></div>
+    <hr>
+    <div class="term big">${fmt(S)} ${si?"≥":"<"} ${fmt(umbral)} <span class="off">→</span> <span class="${si?"z":"off"}">${si?"la invito":"no la invito"}</span></div>
+   </div>
+   <p style="margin-top:16px">El umbral es el <b>valor mínimo que hay que alcanzar para que la neurona dispare</b>. Con θ = ${fmt(umbral)}, ${umbral<=0?"prácticamente cualquier cosa alcanza":"no basta con una sola señal buena"}.</p>
+   <div class="dosvias">
+    <div><h3>Perceptrón, 1958</h3><code>Σwx ≥ θ</code><small>“dispara si el total llega al umbral”</small></div>
+    <div><h3>Forma moderna</h3><code>Σwx + b ≥ 0</code><small>con <b style="color:#FFC94A">b = −θ = ${fmt(sesgo())}</b></small></div>
+   </div>
+   <div class="tip">De ahí sale el sesgo: <b>es el umbral pasado al otro lado de la desigualdad, con el signo cambiado</b>. Restar ${fmt(umbral)} y pedir que dé positivo es lo mismo que pedir que el total llegue a ${fmt(umbral)}. Se escribe así para que el umbral sea un peso más y la máquina también pueda aprenderlo sola.</div>
+  </div>`;
+ }
+
+ if(paso===3){
+  h=`<div class="bloque">
+   <h2>La suma ponderada</h2>
+   <p>Ya con el sesgo adentro, todo colapsa en un solo número: <b>z</b>.</p>
+   <div class="formula">
+    ${ENTRADAS.map(e=>`<div class="term ${e.x?"":"off"}">
+      <span class="w">${fmt(e.w)}</span> × <span class="x">${e.x}</span>
+      <span class="off">&nbsp;=&nbsp;</span>${fmt(e.w*e.x)}
+      <span class="off">&nbsp;&nbsp;${e.corto}</span></div>`).join("")}
+    <div class="term"><span class="w">${fmt(sesgo())}</span><span class="off">&nbsp;&nbsp;sesgo (= −θ)</span></div>
+    <hr>
+    <div class="term big"><span class="off">z =</span> <span class="z">${fmt(z())}</span></div>
+   </div>
+   ${togglesHTML(ENTRADAS,"tuya")}
+   <div class="tip">Esto es un <b>producto punto</b>: z = w · x + b. Millones de estas multiplicaciones al tiempo son la razón por la que las redes se entrenan en GPU.</div>
+  </div>`;
+ }
+
+ if(paso===4){
+  h=`<div class="bloque">
+   <h2>La función de activación</h2>
+   <p>z puede ser −7, 0.3 o 240. La función de activación lo convierte en una respuesta útil y, sobre todo, mete <b>no linealidad</b>.</p>
+   <div class="chips">
+    ${Object.keys(FUNCS).map(k=>`<button class="chip" data-act="${k}" aria-pressed="${activacion===k}">${FUNCS[k].nom}</button>`).join("")}
+   </div>
+   <p style="margin-top:16px">${FUNCS[activacion].txt}</p>
+   ${togglesHTML(ENTRADAS,"tuya")}
+   <div class="tip">Sin activación, apilar capas no serviría: la composición de funciones lineales sigue siendo lineal. <b>La no linealidad es lo que permite aprender cosas curvas</b>, no solo trazar una recta.</div>
+  </div>`;
+ }
+
+ if(paso===5){
+  const inv=invito(),Se=sumaElla(),r=respuesta();
+  h=`<div class="bloque">
+   <h2>Ella responde</h2>
+   <p>Tu neurona ya disparó: <b>${inv?"la invitaste":"no la invitaste"}</b>. Esa salida no muere ahí — se vuelve la entrada de otra neurona, la de ella.</p>
+   ${inv?`
+   <p class="nota">Ella corre su propia cuenta, con sus propias señales y sus propios pesos. Ustedes no los eligieron.</p>
+   ${togglesHTML(ELLA,"suya")}
+   <div class="formula">
+    ${ELLA.map(e=>`<div class="term ${e.x?"":"off"}"><span class="w" style="color:#6BC5FF">${fmt(e.w)}</span> × <span class="x">${e.x}</span><span class="off">&nbsp;=&nbsp;</span>${fmt(e.w*e.x)}<span class="off">&nbsp;&nbsp;${e.corto}</span></div>`).join("")}
+    <hr>
+    <div class="term"><span class="off">Σwx =</span> <span class="w" style="color:#6BC5FF">${fmt(Se)}</span> &nbsp;<span class="off">vs. umbral</span> <span class="z">${fmt(UMBRAL_ELLA)}</span></div>
+    <div class="term big"><span class="off">respuesta =</span> <span class="${r?"z":"off"}">${r}</span> <span class="off">&nbsp;${r?"— sí":"— no"}</span></div>
+   </div>`:`
+   <div class="formula"><div class="term big off">sin invitación no hay respuesta</div></div>
+   <p style="margin-top:14px">Prendan alguna entrada en el paso 1 para que tu neurona dispare y la de ella reciba señal.</p>`}
+   <div class="tip fria">Aquí el <b>escalón</b> es el modelo honesto: ella dice sí o dice no. No existe “salgamos 0.73”. Cuando la salida del mundo real es binaria, el escalón es la función que corresponde — y ese fue justo el diseño original de Rosenblatt.</div>
+   <div class="tip">Fíjense en algo grande: <b>la salida de una neurona es la entrada de otra</b>. Repitan eso mil veces y ya tienen una red.</div>
+  </div>`;
+ }
+
+ if(paso===6){
+  const r=red(),resp=r.dec?(zElla()>=0?1:0):null;
+  h=`<div class="bloque">
+   <h2>La red completa</h2>
+   <p>Todo junto: tus cuatro señales pasan por tres neuronas ocultas, esas producen tu decisión, y tu decisión entra como una señal más en la neurona de ella.</p>
+   <p class="nota">Nadie programó los tres conceptos ocultos. Les pusimos nombre después de ver qué aprendió a detectar cada uno.</p>
+   ${togglesHTML(ENTRADAS,"tuya")}
+   <div class="formula" style="line-height:1.9">
+    ${OCULTA.map((n,i)=>`<div class="term">${n.nom} <span class="z">${fmt(r.h[i])}</span></div>`).join("")}
+    <hr>
+    <div class="term"><span class="off">tu decisión</span> <span class="z">${r.dec}</span></div>
+    <div class="term big"><span class="off">su respuesta</span> <span class="${resp?"z":"off"}">${resp===null?"—":resp}</span></div>
+   </div>
+   ${r.dec?`<p class="nota" style="margin-top:16px">Las señales de ella:</p>${togglesHTML(ELLA,"suya")}`:""}
+   <div class="tip">Cambien 4 entradas por 150.000 píxeles, 3 neuronas por millones y 2 capas por 100: eso es <b>aprendizaje profundo</b>. El entrenamiento —<b>retropropagación</b>— mide el error de la salida y reparte la culpa hacia atrás, ajustando cada peso en la dirección que lo reduce.</div>
+  </div>`;
+ }
+
+ c.innerHTML=h;enlazar();
+}
+
+function enlazar(){
+ document.querySelectorAll("[data-sw]").forEach(b=>{
+  b.onclick=()=>{
+   const lista=b.dataset.lista==="suya"?ELLA:ENTRADAS;
+   const e=lista.find(v=>v.id===b.dataset.sw);
+   e.x=e.x?0:1;refrescar(true);
+  };
+ });
+ document.querySelectorAll("[data-w]").forEach(r=>{
+  r.oninput=()=>{
+   const e=ENTRADAS.find(v=>v.id===r.dataset.w);
+   e.w=parseFloat(r.value);
+   document.getElementById("n-"+e.id).textContent=fmt(e.w);
+   document.querySelectorAll(".chip[data-preset]").forEach(c=>c.setAttribute("aria-pressed","false"));
+   refrescar(true);
+  };
+ });
+ const u=document.getElementById("sl-u");
+ if(u)u.oninput=()=>{umbral=parseFloat(u.value);refrescar(true)};
+ document.querySelectorAll("[data-preset]").forEach(c=>{
+  c.onclick=()=>{const p=PRESETS[c.dataset.preset];ENTRADAS.forEach(e=>e.w=p[e.id]);umbral=p.u;refrescar(true)};
+ });
+ document.querySelectorAll("[data-act]").forEach(c=>{
+  c.onclick=()=>{activacion=c.dataset.act;refrescar(true)};
+ });
+}
+
+let focoPrevio=null;
+function refrescar(recontrolar){
+ if(recontrolar){
+  const a=document.activeElement;
+  focoPrevio=a&&a.dataset?(a.dataset.sw?["sw",a.dataset.sw]:(a.id?["id",a.id]:null)):null;
+  pintarControles();
+  if(focoPrevio){
+   const sel=focoPrevio[0]==="sw"?`[data-sw="${focoPrevio[1]}"]`:`#${focoPrevio[1]}`;
+   const n=document.querySelector(sel);if(n)n.focus();
+  }
+ }
+ dibujar();pintarVeredicto();
+}
+
+function pintarPasos(){
+ const n=document.getElementById("pasos");
+ n.innerHTML=PASOS.map((p,i)=>`<button class="paso-btn" data-p="${i}" aria-current="${i===paso}">${p.t}</button>`).join("");
+ n.querySelectorAll("[data-p]").forEach(b=>{b.onclick=()=>{paso=+b.dataset.p;todo()}});
+}
+function todo(){pintarPasos();pintarControles();dibujar();pintarVeredicto()}
+
+document.addEventListener("keydown",ev=>{
+ if(ev.target.tagName==="INPUT")return;
+ if(ev.key==="ArrowRight"&&paso<PASOS.length-1){paso++;todo()}
+ if(ev.key==="ArrowLeft"&&paso>0){paso--;todo()}
+});
+todo();
+</script>
+</body>
+</html>
